@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetTracker+</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.28.0/feather.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background-color: #f8f9fa; color: #333; }
+        .app { max-width: 480px; margin: 0 auto; background-color: white; height: 100vh; display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        header { background-color: #343a40; color: white; padding: 1rem; display: flex; justify-content: space-between; align-items: center; position: relative; }
+        main { flex-grow: 1; overflow-y: auto; padding: 1.5rem; }
+        .card { background-color: white; border-radius: 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); margin-bottom: 1.5rem; padding: 1rem; border-left: 4px solid #343a40; display: flex; align-items: center; }
+        .card img { width: 60px; height: 60px; border-radius: 50%; margin-right: 1rem; object-fit: cover; }
+        .card-content { flex-grow: 1; }
+        .card-content h3 { margin-bottom: 0.5rem; font-size: 1.2rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+        .card-content p { margin: 0.25rem 0; }
+        .button { background-color: #343a40; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; width: 100%; font-weight: 600; }
+        .button-outline { background-color: white; color: #343a40; border: 1px solid #343a40; }
+        .alert { background-color: #f8d7da; border: 1px solid #f5c2c7; color: #842029; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; }
+        .alert-icon { margin-right: 0.5rem; }
+        .alert h4 { margin: 0; font-size: 1rem; font-weight: 600; color: #842029; }
+        .alert p { margin: 0; font-size: 0.875rem; }
+        .badge { padding: 0.2rem 0.5rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+        .badge-destructive { background-color: #ef4444; color: white; }
+        .badge-secondary { background-color: #e2e8f0; color: #333; }
+        .hidden { display: none; }
+        .hamburger-menu { position: fixed; top: 0; left: -250px; width: 250px; height: 100vh; background-color: white; transition: left 0.3s ease-in-out; z-index: 1000; box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); padding-top: 1rem; }
+        .hamburger-menu.active { left: 0; }
+        .menu-items { padding: 1rem; }
+        .menu-items a { display: block; padding: 0.75rem 0; color: #343a40; text-decoration: none; font-size: 1rem; }
+        .menu-items a:hover { background-color: #f0f0f0; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: none; }
+        .overlay.active { display: block; }
+        input[type="text"], input[type="file"], input[type="checkbox"], input[type="date"], input[type="number"] { width: 100%; padding: 0.5rem; margin-top: 0.5rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; }
+        form { margin-top: 1rem; }
+        .search-bar { display: flex; align-items: center; margin-bottom: 1rem; }
+        .search-bar input { flex-grow: 1; padding: 0.5rem; border: 1px solid #ced4da; border-radius: 4px 0 0 4px; }
+        .search-bar button { padding: 0.5rem 1rem; background-color: #343a40; color: white; border: none; border-radius: 0 4px 4px 0; cursor: pointer; }
+        .search-results { border: 1px solid #ced4da; border-radius: 4px; padding: 1rem; text-align: center; color: #666; }
+        .buttons-group { display: flex; justify-content: space-between; margin-top: 1rem; }
+        .buttons-group .button, .buttons-group .button-outline { width: 48%; }
+        .back-button { display: flex; align-items: center; cursor: pointer; color: #343a40; margin-bottom: 1rem; }
+        .back-button i { margin-right: 0.5rem; }
+        #uploaded-photo { margin-top: 1rem; max-width: 100%; border-radius: 8px; }
+
+        /* Styles for the live tracking section */
+        .tracking-card { border-radius: 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); padding: 1rem; border-left: 4px solid #343a40; background-color: white; }
+        .tracking-card img { width: 100%; border-radius: 8px; margin-bottom: 1rem; }
+        .tracking-card p { margin: 0.5rem 0; }
+        .tracking-card .buttons-group { margin-top: 1rem; }
+
+        /* About, Help & Safety, and Guidance sections */
+        .section-content { padding: 1rem; }
+        .section-content h2 { font-size: 1.5rem; margin-bottom: 1rem; }
+        .section-content p { margin-bottom: 1rem; line-height: 1.5; }
+        .section-content ul { list-style-type: disc; margin-left: 20px; margin-bottom: 1rem; }
+
+        /* Styles for Charts */
+        .chart-container { width: 100%; margin-bottom: 1.5rem; }
+        .chart-container canvas { width: 100%; }
+
+        /* Home Page - Summary Widgets */
+        .summary-widget { display: flex; align-items: center; justify-content: space-between; background-color: #e9ecef; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+        .summary-widget h4 { font-size: 1rem; font-weight: 600; color: #343a40; }
+        .summary-widget p { margin: 0; color: #343a40; font-size: 1.2rem; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <header>
+            <button id="menu-toggle" class="nav-button">
+                <i data-feather="menu"></i>
+            </button>
+            <h1>PetTracker+</h1>
+            <button class="nav-button">
+                <i data-feather="settings"></i>
+            </button>
+        </header>
+        <main id="content">
+            <!-- Home Screen -->
+            <div id="home-screen">
+                <h2 class="text-2xl font-bold mb-4">Dashboard</h2>
+
+                <!-- Pet Status Pie Chart -->
+                <div class="chart-container">
+                    <canvas id="pet-status-chart"></canvas>
+                </div>
+
+                <!-- Pet Activity Summary -->
+                <div class="summary-widget">
+                    <h4>Today's Activity</h4>
+                    <p id="todays-activity">75%</p>
+                </div>
+                <div class="summary-widget">
+                    <h4>Recent Alerts</h4>
+                    <p id="recent-alerts">2</p>
+                </div>
+
+                <!-- Health Monitoring Overview -->
+                <h3 class="text-xl font-bold mb-2">Health Monitoring</h3>
+                <div class="summary-widget">
+                    <h4>Next Vet Visit</h4>
+                    <p id="next-vet-visit">15 Sep 2024</p>
+                </div>
+                <div class="summary-widget">
+                    <h4>Vaccination Due</h4>
+                    <p id="vaccination-due">20 Sep 2024</p>
+                </div>
+            </div>
+
+            <!-- Recently Reported Pets Screen -->
+            <div id="reported-pets-screen">
+                <h2 class="text-2xl font-bold mb-4">Recently Reported Pets</h2>
+                <div class="card" onclick="trackPet('Max', 'Dog', 'Labrador', '123 Main St')">
+                    <img id="photo-max" src="https://i.ytimg.com/vi/iCSyi8rbVnQ/maxresdefault.jpg" alt="Max's photo">
+                    <div class="card-content">
+                        <h3>Max <span class="badge badge-destructive">Lost</span></h3>
+                        <p>Species: Dog</p>
+                        <p>Breed: Labrador</p>
+                        <p>Last Seen: 123 Main street, New Delhi</p>
+                        <input type="file" accept="image/*" class="button-outline" onchange="previewPhoto(event, 'photo-max')">
+                    </div>
+                </div>
+                <div class="card" onclick="trackPet('Whiskers', 'Cat', 'Siamese', 'Central Park')">
+                    <img id="photo-whiskers" src="https://image.petmd.com/files/styles/863x625/public/2023-04/siamese-cat.jpg" alt="Whiskers' photo">
+                    <div class="card-content">
+                        <h3>Whiskers <span class="badge badge-secondary">Found</span></h3>
+                        <p>Species: Cat</p>
+                        <p>Breed: Siamese</p>
+                        <p>Last Seen: Central Park,Janakpuri</p>
+                        <input type="file" accept="image/*" class="button-outline" onchange="previewPhoto(event, 'photo-whiskers')">
+                    </div>
+                </div>
+                <div class="card" onclick="trackPet('Daisy', 'Cow', 'Holstein', 'Farm Road 5')">
+                    <img id="photo-daisy" src="https://pbs.twimg.com/media/FRshs7vVcAAsK58?format=jpg&name=large" alt="Daisy's photo">
+                    <div class="card-content">
+                        <h3>Daisy <span class="badge badge-destructive">Lost</span></h3>
+                        <p>Species: Cow</p>
+                        <p>Breed: Red Sindhi</p>
+                        <p>Last Seen: Farm Road, Gurugram</p>
+                        <input type="file" accept="image/*" class="button-outline" onchange="previewPhoto(event, 'photo-daisy')">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Tracking Screen -->
+            <div id="map-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <h2 class="text-2xl font-bold mb-4">Live Pet Tracking</h2>
+                <div class="tracking-card">
+                    <img id="tracking-map" src="https://images.ctfassets.net/3prze68gbwl1/asset-17suaysk1qa1i6f/22755ecca3ba33251723427d8fef1dbd/687474703a2f2f692e696d6775722e636f6d2f51744a374533642e676966.gif" alt="Map">
+                    <p><strong>Pet Information:</strong> <span id="tracking-pet-name">Max</span></p>
+                    <p><strong>Species:</strong> <span id="tracking-pet-species">Dog</span></p>
+                    <p><strong>Breed:</strong> <span id="tracking-pet-breed">Labrador</span></p>
+                    <p><strong>Last seen:</strong> <span id="tracking-last-seen">123 Main St</span></p>
+                    <p><strong>Location:</strong> <span id="tracking-location">Max's last known location</span></p>
+                    <p><strong>Battery:</strong> 75%</p>
+                    <div class="buttons-group">
+                        <button class="button" onclick="switchTab('safe-zone')">Set Safe Zone</button>
+                        <button class="button-outline" onclick="switchTab('history')">History</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Safe Zone Screen -->
+            <div id="safe-zone-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('map')"><i data-feather="arrow-left"></i> Back</div>
+                <h2 class="text-2xl font-bold mb-4">Set Safe Zone</h2>
+                <div class="tracking-card">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRDzA2mTx7pfAAQNwsKuwxbZawTLramzEnoCgzsG2FwJfQ1uVhaw_xMq3drNeLeGSyeocw&usqp=CAU" alt="Safe Zone Map">
+                    <p>Select the area on the map to set a safe zone for Max.</p>
+                    <div class="buttons-group">
+                        <button class="button">Save Safe Zone</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Screen -->
+            <div id="history-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('map')"><i data-feather="arrow-left"></i> Back</div>
+                <h2 class="text-2xl font-bold mb-4">Tracking History</h2>
+                <div class="tracking-card">
+                    <p><strong>Movement Insights:</strong></p>
+                    <ul>
+                        <li>Central Park - 2 days ago - Stayed for 2 hours</li>
+                        <li>Times Square - 4 days ago - Stayed for 30 minutes</li>
+                        <li>123 Main St - 1 week ago - Stayed for 1 hour</li>
+                    </ul>
+                </div>
+                <div class="chart-container">
+                    <canvas id="movement-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Health Monitoring Screen -->
+            <div id="health-monitoring-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <h2 class="text-2xl font-bold mb-4">Health Monitoring</h2>
+                <form id="health-form" class="space-y-4">
+                    <label>Vaccination Date: <input type="date" id="vaccination-date"></label>
+                    <label>Vet Visit Reminder: <input type="date" id="vet-visit-date"></label>
+                    <label>Weight Tracking (kg): <input type="number" id="weight-tracking" placeholder="Enter weight"></label>
+                    <div class="buttons-group">
+                        <button type="submit" class="button">Set Reminders</button>
+                    </div>
+                </form>
+                <div class="chart-container">
+                    <canvas id="weight-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Search Screen -->
+            <div id="search-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <h2 class="text-2xl font-bold mb-4">Search for Lost Pets</h2>
+                <div class="search-bar">
+                    <input type="text" id="search-input" placeholder="Search by name, species, or location">
+                    <button onclick="searchPets()"><i data-feather="search"></i></button>
+                </div>
+                <div id="search-results" class="search-results">
+                    Search results will appear here
+                </div>
+            </div>
+
+            <!-- Report Screen -->
+            <div id="report-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <h2 class="text-2xl font-bold mb-4">Report a Lost Pet</h2>
+                <form id="report-form" class="space-y-4">
+                    <label>Pet's Name: <input id="pet-name" type="text" placeholder="Enter pet's name"></label>
+                    <label>Species: <input id="pet-species" type="text" placeholder="Enter species"></label>
+                    <label>Breed: <input id="pet-breed" type="text" placeholder="Enter breed"></label>
+                    <label>Last Seen Location: <input id="pet-last-seen" type="text" placeholder="Enter last seen location"></label>
+                    <label>Description: <input id="pet-description" type="text" placeholder="Enter description"></label>
+                    <label>Upload Picture: <input id="pet-photo" type="file" accept="image/*" onchange="previewPhoto(event, 'pet-upload-photo')"></label>
+                    <img id="pet-upload-photo" class="hidden" />
+                    <button type="submit" class="button">Submit Report</button>
+                </form>
+            </div>
+
+            <!-- Alerts Screen -->
+            <div id="alerts-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <h2 class="text-2xl font-bold mb-4">Alerts & Notifications</h2>
+                <div class="alert">
+                    <i data-feather="alert-circle" class="alert-icon"></i>
+                    <div>
+                        <h4>Emergency!</h4>
+                        <p>Buddy has left the safe zone! Last seen at Central Park entrance.</p>
+                    </div>
+                </div>
+                <div class="alert">
+                    <i data-feather="battery" class="alert-icon"></i>
+                    <div>
+                        <h4>Low Battery</h4>
+                        <p>Buddy's tracker battery is at 15%. Please charge soon.</p>
+                    </div>
+                </div>
+                <div class="alert">
+                    <i data-feather="calendar" class="alert-icon"></i>
+                    <div>
+                        <h4>Vaccination Due</h4>
+                        <p>Buddy's annual vaccination is due next week.</p>
+                    </div>
+                </div>
+                <button class="button">Manage Alert Settings</button>
+            </div>
+
+            <!-- Profile Screen -->
+            <div id="profile-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <h2 class="text-2xl font-bold mb-4">My Pets</h2>
+                <div class="card">
+                    <h3>Buddy</h3>
+                    <p>Golden Retriever, 3 years</p>
+                </div>
+                <button class="button mt-4">Add New Pet</button>
+            </div>
+
+            <!-- About PetTracker+ Screen -->
+            <div id="about-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <div class="section-content">
+                    <h2>About PetTracker+</h2>
+                    <p>PetTracker+ is your reliable companion for tracking your beloved pets. Our product offers the following key features:</p>
+                    <ul>
+                        <li><strong>Water-Resistant:</strong> Perfect for all weather conditions.</li>
+                        <li><strong>One-Time Purchase Model:</strong> Buy once and use it for a lifetime.</li>
+                        <li><strong>Subscription Model:</strong> Get access to premium features and regular updates.</li>
+                        <li><strong>Cost-Effective:</strong> Affordable plans to suit every pet owner's needs.</li>
+                        <li><strong>Reliable Tracking:</strong> Real-time GPS tracking ensures you always know your pet's location.</li>
+                    </ul>
+                    <h3>How Tracking Works</h3>
+                    <p>PetTracker+ uses advanced GPS technology to track your pet's location in real-time. Simply attach the tracker to your pet's collar and monitor their location using our app.</p>
+                </div>
+            </div>
+
+            <!-- Help & Support Screen -->
+            <div id="help-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <div class="section-content">
+                    <h2>Help & Support</h2>
+                    <p>If you need assistance with PetTracker+, we're here to help. Below are some resources to get you started:</p>
+                    <ul>
+                        <li><strong>FAQs:</strong> Find answers to common questions.</li>
+                        <li><strong>Contact Support:</strong> Reach out to our support team for personalized assistance.</li>
+                        <li><strong>Troubleshooting:</strong> Resolve common issues with our troubleshooting guide.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Safety Features Screen -->
+            <div id="safety-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <div class="section-content">
+                    <h2>Safety Features</h2>
+                    <p>PetTracker+ includes several safety features to keep your pet secure:</p>
+                    <ul>
+                        <li><strong>Real-Time Navigation:</strong> Get turn-by-turn directions to your pet's location.</li>
+                        <li><strong>Emergency Mode:</strong> Activate an emergency mode that triggers instant alerts if your pet leaves a safe zone.</li>
+                        <li><strong>Pet Health Monitoring:</strong> Set reminders for vaccinations and vet visits to ensure your pet's well-being.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- App Guidance Screen -->
+            <div id="guidance-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <div class="section-content">
+                    <h2>App Guidance</h2>
+                    <p>Welcome to PetTracker+! Here's how to get started:</p>
+                    <ul>
+                        <li><strong>Step 1:</strong> Register your pet by adding their details in the 'Profile' section.</li>
+                        <li><strong>Step 2:</strong> Attach the PetTracker+ device to your pet's collar.</li>
+                        <li><strong>Step 3:</strong> Monitor your pet's location in real-time using the 'Track Pet' option.</li>
+                        <li><strong>Step 4:</strong> Set up safe zones and customize alert settings in the 'Settings' tab.</li>
+                    </ul>
+                    <p>If you need further assistance, visit the 'Help & Support' section.</p>
+                </div>
+            </div>
+
+            <!-- Settings Screen -->
+            <div id="settings-screen" class="hidden">
+                <div class="back-button" onclick="switchTab('home')"><i data-feather="arrow-left"></i> Back</div>
+                <div class="section-content">
+                    <h2>Settings</h2>
+                    <form>
+                        <label>
+                            <input type="checkbox" id="notifications-enabled">
+                            Enable Notifications
+                        </label>
+                        <br>
+                        <label>
+                            <input type="checkbox" id="safe-zone-enabled">
+                            Enable Safe Zone Alerts
+                        </label>
+                        <br>
+                        <label>
+                            <input type="checkbox" id="tracking-history-enabled">
+                            Enable Tracking History
+                        </label>
+                        <br>
+                        <button type="submit" class="button mt-4">Save Settings</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Hamburger Menu -->
+    <div class="hamburger-menu">
+        <div class="menu-items">
+            <a href="#" onclick="switchTab('home')">Home</a>
+            <a href="#" onclick="switchTab('reported-pets')">Reported Pets</a>
+            <a href="#" onclick="switchTab('search')">Search Lost Pets</a>
+            <a href="#" onclick="switchTab('map')">Track Pet</a>
+            <a href="#" onclick="switchTab('report')">Report Lost Pet</a>
+            <a href="#" onclick="switchTab('alerts')">Alerts</a>
+            <a href="#" onclick="switchTab('profile')">My Profile</a>
+            <a href="#" onclick="switchTab('about')">About PetTracker+</a>
+            <a href="#" onclick="switchTab('help')">Help & Support</a>
+            <a href="#" onclick="switchTab('safety')">Safety Features</a>
+            <a href="#" onclick="switchTab('guidance')">App Guidance</a>
+            <a href="#" onclick="switchTab('health-monitoring')">Health Monitoring</a>
+            <a href="#" onclick="switchTab('settings')">Settings</a>
+            <a href="#">Logout</a>
+        </div>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay"></div>
+
+    <!-- JavaScript to Handle Navigation, Charts, and Menu -->
+    <script>
+        feather.replace();
+
+        const randomCoordinates = () => ({
+            lat: (40.7128 + (Math.random() - 0.5) * 0.1).toFixed(4),
+            lng: (-74.0060 + (Math.random() - 0.5) * 0.1).toFixed(4)
+        });
+
+        let activeTab = 'home';
+        let trackedPet = null;
+
+        function switchTab(tab) {
+            document.querySelectorAll('main > div').forEach(div => div.classList.add('hidden'));
+            document.getElementById(tab + '-screen').classList.remove('hidden');
+            closeMenu();
+            activeTab = tab;
+        }
+
+        function trackPet(name, species, breed, lastSeen) {
+            trackedPet = { name, species, breed, lastSeen };
+            document.getElementById('tracking-pet-name').textContent = name;
+            document.getElementById('tracking-pet-species').textContent = species;
+            document.getElementById('tracking-pet-breed').textContent = breed;
+            document.getElementById('tracking-last-seen').textContent = lastSeen;
+            document.getElementById('tracking-location').textContent = `${name}'s last known location`;
+            switchTab('map');
+        }
+
+        function previewPhoto(event, imgId) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onloadend = function() {
+                document.getElementById(imgId).src = reader.result;
+            };
+            if (file) {
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function searchPets() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const results = ["Max", "Whiskers", "Daisy", "Buddy"].filter(pet => pet.toLowerCase().includes(query));
+            document.getElementById('search-results').textContent = results.length ? `Found pets: ${results.join(', ')}` : 'No pets found.';
+        }
+
+        document.getElementById('report-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Pet reported successfully!');
+            switchTab('home');
+        });
+
+        // Hamburger Menu Toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const hamburgerMenu = document.querySelector('.hamburger-menu');
+        const overlay = document.querySelector('.overlay');
+
+        menuToggle.addEventListener('click', () => {
+            hamburgerMenu.classList.toggle('active');
+            overlay.classList.toggle('active');
+        });
+
+        overlay.addEventListener('click', () => {
+            closeMenu();
+        });
+
+        function closeMenu() {
+            hamburgerMenu.classList.remove('active');
+            overlay.classList.remove('active');
+        }
+
+        // Initialize the first tab
+        switchTab(activeTab);
+
+        // Chart.js for Real-Time Pet Status
+        const ctx = document.getElementById('pet-status-chart').getContext('2d');
+        const petStatusChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Safe', 'Lost', 'At Risk'],
+                datasets: [{
+                    label: 'Pet Status',
+                    data: [70, 20, 10],
+                    backgroundColor: ['#4CAF50', '#EF4444', '#FF9800'],
+                    borderWidth: 1
+                }]
+            }
+        });
+
+        // Movement History Chart
+        const movementCtx = document.getElementById('movement-chart').getContext('2d');
+        const movementChart = new Chart(movementCtx, {
+            type: 'line',
+            data: {
+                labels: ['1 week ago', '4 days ago', '2 days ago'],
+                datasets: [{
+                    label: 'Movement Duration (hrs)',
+                    data: [1, 0.5, 2],
+                    backgroundColor: '#4CAF50',
+                    borderColor: '#4CAF50',
+                    fill: false,
+                    tension: 0.1
+                }]
+            }
+        });
+
+        // Weight Tracking Chart
+        const weightCtx = document.getElementById('weight-chart').getContext('2d');
+        const weightChart = new Chart(weightCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                datasets: [{
+                    label: 'Weight (kg)',
+                    data: [20, 21, 22, 23, 24],
+                    backgroundColor: '#3b82f6',
+                    borderColor: '#3b82f6',
+                    fill: false,
+                    tension: 0.1
+                }]
+            }
+        });
+    </script>
+</body>
+</html>
